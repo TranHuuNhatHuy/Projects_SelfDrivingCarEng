@@ -32,6 +32,7 @@ import misc.objdet_tools as tools
 
 # Misc params
 name_window = "Lidar Point-Cloud"
+name_BEV_inten_window = "BEV Intensity Map (normalized)"
 
 
 # Visualize lidar point-cloud
@@ -123,7 +124,7 @@ def bev_from_pcl(lidar_pcl, configs):
     elong_pcl = elong_pcl - configs.lim_z[0]  
 
     # Convert sensor coordinates to bev-map coordinates (center is bottom-middle)
-    
+
     # ======================================= ID_S2_EX1 START ======================================= #  
 
     # Step 1 :  compute bev-map discretization by dividing x-range by the bev-image height (see configs)
@@ -143,29 +144,52 @@ def bev_from_pcl(lidar_pcl, configs):
 
     # =============================================================================================== #    
     
+    
     # Compute intensity layer of the BEV map
-    ####### ID_S2_EX2 START #######     
-    #######
-    print("student task ID_S2_EX2")
 
-    ## step 1 : create a numpy array filled with zeros which has the same dimensions as the BEV map
+    # ======================================= ID_S2_EX2 START ======================================= #
 
-    # step 2 : re-arrange elements in lidar_pcl_cpy by sorting first by x, then y, then -z (use numpy.lexsort)
+    # Step 1 : create a numpy array filled with zeros which has the same dimensions as the BEV map
+    inten_layer = np.zeros((configs.bev_height, configs.bev_width))
 
-    ## step 3 : extract all points with identical x and y such that only the top-most z-coordinate is kept (use numpy.unique)
-    ##          also, store the number of points per x,y-cell in a variable named "counts" for use in the next task
+    # Step 2 : re-arrange elements in lidar_pcl_cpy by sorting first by x, then y, then -z (use numpy.lexsort)
+    lidar_pcl_rearranged = lidar_pcl_cpy[
+        np.lexsort((
+            -lidar_pcl_cpy[:, 2], 
+            lidar_pcl_cpy[:, 1], 
+            lidar_pcl_cpy[:, 0]
+        ))
+    ]
 
-    ## step 4 : assign the intensity value of each unique entry in lidar_top_pcl to the intensity map 
-    ##          make sure that the intensity is scaled in such a way that objects of interest (e.g. vehicles) are clearly visible    
-    ##          also, make sure that the influence of outliers is mitigated by normalizing intensity on the difference between the max. and min. value within the point cloud
+    # Step 3 : extract all points with identical x and y such that only the top-most z-coordinate is kept (use numpy.unique)
+    # Also, store the number of points per x,y-cell in a variable named "counts" for use in the next task
+    lidar_top_pcl, _, counts = np.unique(
+        lidar_pcl_rearranged[ : , 0 : 2], 
+        axis = 0, 
+        return_index = True, 
+        return_counts = True
+    )
 
-    ## step 5 : temporarily visualize the intensity map using OpenCV to make sure that vehicles separate well from the background
+    # Step 4 : assign the intensity value of each unique entry in lidar_top_pcl to the intensity map 
+    # Make sure that the intensity is scaled in such a way that objects of interest (e.g. vehicles) are clearly visible    
+    # Also, make sure that the influence of outliers is mitigated by normalizing intensity on the difference between the max. and min. value within the point cloud
+    lidar_pcl_intensity = lidar_pcl_top[:, 3]
+    inten_layer[
+        lidar_top_pcl[:, 0], 
+        lidar_top_pcl[:, 1]
+    ] = lidar_top_pcl[:, 3] / (np.amax(lidar_pcl_intensity) - np.amin(lidar_pcl_intensity))
 
-    #######
-    ####### ID_S2_EX2 END ####### 
+    # Step 5 : temporarily visualize the intensity map using OpenCV to make sure that vehicles separate well from the background
+    inten_img = (inten_layer * 255).astype(np.uint8)
+    cv2.imshow(name_BEV_inten_window, inten_img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    # =============================================================================================== #
 
 
     # Compute height layer of the BEV map
+
     ####### ID_S2_EX3 START #######     
     #######
     print("student task ID_S2_EX3")

@@ -72,7 +72,7 @@ task_prep_configs = {
         "exec_tracking": [],
         "exec_visualization": ['show_pcl'],
     },
-    "ID_S2_EX1": {
+    "ID_S2_EXall": {
         "data_filename": sequence_1,
         "show_only_frames": [0, 1],
         "exec_data": ['pcl_from_rangeimage'],
@@ -80,9 +80,10 @@ task_prep_configs = {
         "exec_tracking": [],
         "exec_visualization": [],
     },
+    
 }
 
-current_task = "ID_S1_EX2"
+current_task = "ID_S1_EX1"
 
 ## Select Waymo Open Dataset file and frame numbers
 
