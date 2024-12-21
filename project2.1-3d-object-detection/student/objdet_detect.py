@@ -58,12 +58,53 @@ def load_configs_model(model_name='darknet', configs=None):
         configs.use_giou_loss = False
 
     elif model_name == 'fpn_resnet':
-        ####### ID_S3_EX1-3 START #######     
-        #######
-        print("student task ID_S3_EX1-3")
 
-        #######
-        ####### ID_S3_EX1-3 END #######     
+        # ======================================= ID_S3_EX1-3 START ======================================= #
+
+        configs.model_path = os.path.join(parent_path, 'tools', 'objdet_models', 'resnet')
+        configs.pretrained_filename = os.path.join(configs.model_path, 'pretrained', 'fpn_resnet_18_epoch_300.pth')
+        configs.saved_fn = "fpn_resnet_18"                  # The name using for saving logs, models,...
+        configs.arch = "fpn_resnet"                         # The name of the model architecture
+        configs.K = 50                                      # The number of top K
+        configs.no_cuda = False                             # If true, cuda is not used
+        configs.gpu_idx = 0                                 # GPU index to use
+        configs.img_size = 608                              # Input image size
+        configs.batch_size = 4                              # Mini-batch size
+        configs.conf_thresh = 0.3                           # Confidence threshold
+        configs.nms_thresh = 0.5                            # NMS threshold
+        configs.num_samples = None                          # Take a subset of the dataset to run and debug
+        configs.num_workers = 1                             # Number of threads for data loader
+        configs.peak_thresh = 0.2                           # Threshold for peak detection
+        configs.save_test_output = False                    # Save test output
+        configs.output_format = "image"                     # The type of the test output (support image or video)
+        configs.output_video_fn = "out_fpn_resnet_18"       # The video filename if the output format is video
+        configs.output_width = 608                          # the width of showing output, the height maybe vary
+        configs.pin_memory = True                           # Pin memory in data loader
+        configs.distributed = False                         # For testing on 1 GPU only
+        
+        configs.input_size = (608, 608)                     # The input size of the model
+        configs.hm_size = (152, 152)                        # The size of the output heatmap
+        configs.down_ratio = 4                              # The down ratio of the model
+        configs.max_objects = 50                            # The maximum number of objects to detect
+        configs.imagenet_pretrained = False                 # Use imagenet pretrained model
+        configs.head_conv = 64                              # The number of head convolutional channels
+        configs.num_classes = 3                             # The number of classes to detect
+        configs.num_center_offset = 2                       # The number of center offset
+        configs.num_z = 1                                   # The number of depth
+        configs.num_dim = 3                                 # The number of dimensions
+        configs.num_direction = 2                           # The number of orientation
+
+        configs.heads = {
+            "hm_cen": configs.num_classes,
+            "cen_offset": configs.num_center_offset,
+            "direction": configs.num_direction,
+            "z_coor": configs.num_z,
+            "dim": configs.num_dim
+        }
+        configs.num_input_features = 4
+
+        # ================================================================================================= #
+
 
     else:
         raise ValueError("Error: Invalid model name")

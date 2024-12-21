@@ -72,7 +72,7 @@ task_prep_configs = {
         "exec_tracking": [],
         "exec_visualization": ['show_pcl'],
     },
-    "ID_S2_EXall": {
+    "ID_S2_EX_all": {
         "data_filename": sequence_1,
         "show_only_frames": [0, 1],
         "exec_data": ['pcl_from_rangeimage'],
@@ -80,7 +80,15 @@ task_prep_configs = {
         "exec_tracking": [],
         "exec_visualization": [],
     },
-    
+    "ID_S3_EX1": {
+        "data_filename": sequence_1,
+        "show_only_frames": [50, 51],
+        "exec_data": ['pcl_from_rangeimage', 'load_image'],
+        "exec_detection": ['bev_from_pcl', 'detect_objects'],
+        "exec_tracking": [],
+        "exec_visualization": ['show_objects_in_bev_labels_in_camera'],
+        "configs_det": "fpn_resnet",
+    },
 }
 
 current_task = "ID_S1_EX1"
@@ -97,7 +105,7 @@ datafile = WaymoDataFileReader(data_fullpath)
 datafile_iter = iter(datafile)  # initialize dataset iterator
 
 ## Initialize object detection
-configs_det = det.load_configs(model_name='fpn_resnet') # options are 'darknet', 'fpn_resnet'
+configs_det = det.load_configs(model_name = task_prep_configs[current_task]["configs_det"]) # options are 'darknet', 'fpn_resnet'
 model_det = det.create_model(configs_det)
 
 configs_det.use_labels_as_objects = False # True = use groundtruth labels as objects, False = use model-based detection
@@ -115,10 +123,12 @@ np.random.seed(10) # make random values predictable
 
 ## Selective execution and visualization
 exec_data = task_prep_configs[current_task]["exec_data"]
+print('exec_data:', exec_data)
 exec_detection = task_prep_configs[current_task]["exec_detection"]
 exec_tracking = task_prep_configs[current_task]["exec_tracking"]
 exec_visualization = task_prep_configs[current_task]["exec_visualization"]
 exec_list = make_exec_list(exec_detection, exec_tracking, exec_visualization)
+print('exec_list:', exec_list)
 vis_pause_time = 0 # set pause time between frames in ms (0 = stop between frames until key is pressed)
 
 
