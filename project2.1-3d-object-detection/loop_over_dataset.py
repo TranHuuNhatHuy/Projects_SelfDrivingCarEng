@@ -80,7 +80,7 @@ task_prep_configs = {
         "exec_tracking": [],
         "exec_visualization": [],
     },
-    "ID_S3_EX1": {
+    "ID_S3_EX_all": {
         "data_filename": sequence_1,
         "show_only_frames": [50, 51],
         "exec_data": ['pcl_from_rangeimage', 'load_image'],
@@ -89,6 +89,15 @@ task_prep_configs = {
         "exec_visualization": ['show_objects_in_bev_labels_in_camera'],
         "configs_det": "fpn_resnet",
     },
+    "ID_S4_EX_all": {
+        "data_filename": sequence_1,
+        "show_only_frames": [0, 1],
+        "exec_data": ['pcl_from_rangeimage'],
+        "exec_detection": ['bev_from_pcl', 'detect_objects', 'validate_object_labels', 'measure_detection_performance'],
+        "exec_tracking": [],
+        "exec_visualization": ['show_detection_performance'],
+        "configs_det": "darknet",
+    }
 }
 
 current_task = "ID_S1_EX1"
