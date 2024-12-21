@@ -100,7 +100,7 @@ task_prep_configs = {
     }
 }
 
-current_task = "ID_S1_EX1"
+current_task = "ID_S2_EX_all"
 
 ## Select Waymo Open Dataset file and frame numbers
 
