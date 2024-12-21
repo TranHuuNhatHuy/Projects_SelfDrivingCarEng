@@ -28,6 +28,7 @@ from tools.objdet_models.resnet.utils.evaluation_utils import decode, post_proce
 
 from tools.objdet_models.darknet.models.darknet2pytorch import Darknet as darknet
 from tools.objdet_models.darknet.utils.evaluation_utils import post_processing_v2
+from tools.objdet_models.darknet.utils.evaluation_utils import _sigmoid
 
 
 # load model-related parameters into an edict
@@ -156,12 +157,16 @@ def create_model(configs):
     elif 'fpn_resnet' in configs.arch:
         print('using ResNet architecture with feature pyramid')
         
-        ####### ID_S3_EX1-4 START #######     
-        #######
-        print("student task ID_S3_EX1-4")
+        # ======================================= ID_S3_EX1-4 START ======================================= #
 
-        #######
-        ####### ID_S3_EX1-4 END #######     
+        model = fpn_resnet.get_pose_net(
+            heads = configs.heads,
+            head_conv = configs.head_conv,
+            num_layers = configs.num_layers,
+            imagenet_pretrained = configs.imagenet_pretrained
+        )
+        
+        # ================================================================================================= #
     
     else:
         assert False, 'Undefined model backbone'
@@ -205,31 +210,55 @@ def detect_objects(input_bev_maps, model, configs):
         elif 'fpn_resnet' in configs.arch:
             # decode output and perform post-processing
             
-            ####### ID_S3_EX1-5 START #######     
-            #######
-            print("student task ID_S3_EX1-5")
+            # ======================================= ID_S3_EX1-5 START ======================================= #
 
-            #######
-            ####### ID_S3_EX1-5 END #######     
-
+            outputs["hm_cen"] = _sigmoid(outputs["hm_cen"])
+            outputs["cen_offset"] = _sigmoid(outputs["cen_offset"])
+            detections = decode(
+                hm_cen = outputs["hm_cen"],
+                cen_offset = outputs["cen_offset"],
+                direction = outputs["direction"],
+                z_coor = outputs["z_coor"],
+                dim = outputs["dim"],
+                K = configs.K,
+            ).cpu().numpy().astype(np.float32)
+            detections = post_processing(detections, configs)[0][1]
             
+            # ================================================================================================= #
 
-    ####### ID_S3_EX2 START #######     
-    #######
+
+    # ======================================= ID_S3_EX2 START ======================================= #
+    
     # Extract 3d bounding boxes from model response
-    print("student task ID_S3_EX2")
     objects = [] 
 
-    ## step 1 : check whether there are any detections
+    # Step 1 : check whether there are any detections
+    if not detections:
+        return objects
 
-        ## step 2 : loop over all detections
+    # Step 2 : loop over all detections
+    for det in detections:
+        this_id, this_x, this_y, this_z, this_h, this_w, this_l, this_yaw = det
+
+        # Step 3 : perform the conversion using the limits for x, y and z set in the configs structure
+        x = this_y * (configs.lim_x[1] - configs.lim_x[0]) / configs.bev_height
+        y = this_x * (configs.lim_y[1] - configs.lim_y[0]) / configs.bev_width
+        w = this_w * (configs.lim_y[1] - configs.lim_y[0]) / configs.bev_width
+        l = this_l * (configs.lim_x[1] - configs.lim_x[0]) / configs.bev_height
+        z = this_z
+        yaw = this_yaw
+        h = this_h
         
-            ## step 3 : perform the conversion using the limits for x, y and z set in the configs structure
+        # Step 4 : append the current object to the 'objects' array
+        if (
+            (x >= configs.lim_x[0]) and (x <= configs.lim_x[1]) and
+            (y >= configs.lim_y[0]) and (y <= configs.lim_y[1]) and
+            (z >= configs.lim_z[0]) and (z <= configs.lim_z[1])
+        ):
+            objects.append([x, y, z, h, w, l, this_h, yaw]
+        )
         
-            ## step 4 : append the current object to the 'objects' array
-        
-    #######
-    ####### ID_S3_EX2 START #######   
+    # =============================================================================================== #
     
     return objects    
 
