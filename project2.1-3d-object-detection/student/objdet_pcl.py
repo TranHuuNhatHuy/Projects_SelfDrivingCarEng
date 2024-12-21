@@ -15,6 +15,7 @@ import cv2
 import numpy as np
 import torch
 import open3d
+import zlib
 
 # Project dir to Python path for relative imports
 import os
@@ -67,19 +68,23 @@ def show_pcl(pcl):
        
 
 # Visualize range image
-def show_range_image(frame: dataset_pb2.Frame, lidar_name: str):
+def show_range_image(frame: dataset_pb2.Frame, lidar_name: int):
 
     # ======================================= ID_S1_EX1 START ======================================= #     
-    
+
     # Step 1 : extract lidar data and range image for the roof-mounted lidar
     laser_data = [
         laser for laser in frame.lasers
-        if laser.name == lidar_name[0]
-    ]
+        if laser.name == lidar_name
+    ][0]
     range_img = []
     if len(laser_data.ri_return1.range_image_compressed) > 0:
         range_img = dataset_pb2.MatrixFloat()
-        range_img.ParseFromString(laser_data.ri_return1.range_image_compressed)
+        range_img.ParseFromString(
+            zlib.decompress(
+                laser_data.ri_return1.range_image_compressed
+            )
+        )
         range_img = np.array(range_img.data).reshape(range_img.shape.dims)
     
     # Step 2 : extract the range and the intensity channel from the range image

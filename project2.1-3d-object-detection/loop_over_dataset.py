@@ -114,7 +114,10 @@ datafile = WaymoDataFileReader(data_fullpath)
 datafile_iter = iter(datafile)  # initialize dataset iterator
 
 ## Initialize object detection
-configs_det = det.load_configs(model_name = task_prep_configs[current_task]["configs_det"]) # options are 'darknet', 'fpn_resnet'
+if "configs_det" in task_prep_configs[current_task].keys():
+    configs_det = det.load_configs(model_name = task_prep_configs[current_task]["configs_det"]) # options are 'darknet', 'fpn_resnet'
+else:
+    configs_det = det.load_configs(model_name = "fpn_resnet")
 model_det = det.create_model(configs_det)
 
 configs_det.use_labels_as_objects = False # True = use groundtruth labels as objects, False = use model-based detection

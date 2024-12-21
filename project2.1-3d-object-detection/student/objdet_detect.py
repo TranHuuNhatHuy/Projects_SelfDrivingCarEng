@@ -25,10 +25,10 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 # model-related
 from tools.objdet_models.resnet.models import fpn_resnet
 from tools.objdet_models.resnet.utils.evaluation_utils import decode, post_processing 
+from tools.objdet_models.resnet.utils.torch_utils import _sigmoid
 
 from tools.objdet_models.darknet.models.darknet2pytorch import Darknet as darknet
 from tools.objdet_models.darknet.utils.evaluation_utils import post_processing_v2
-from tools.objdet_models.darknet.utils.evaluation_utils import _sigmoid
 
 
 # load model-related parameters into an edict
@@ -71,10 +71,11 @@ def load_configs_model(model_name='darknet', configs=None):
         configs.gpu_idx = 0                                 # GPU index to use
         configs.img_size = 608                              # Input image size
         configs.batch_size = 4                              # Mini-batch size
-        configs.conf_thresh = 0.3                           # Confidence threshold
-        configs.nms_thresh = 0.5                            # NMS threshold
+        configs.conf_thresh = 0.5                           # Confidence threshold
+        configs.nms_thresh = 0.4                            # NMS threshold
         configs.num_samples = None                          # Take a subset of the dataset to run and debug
         configs.num_workers = 1                             # Number of threads for data loader
+        configs.num_layers = 18                             # The number of layers in backbone
         configs.peak_thresh = 0.2                           # Threshold for peak detection
         configs.save_test_output = False                    # Save test output
         configs.output_format = "image"                     # The type of the test output (support image or video)
