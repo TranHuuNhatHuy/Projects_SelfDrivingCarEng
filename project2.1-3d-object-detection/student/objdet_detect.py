@@ -50,6 +50,7 @@ def load_configs_model(model_name='darknet', configs=None):
         configs.batch_size = 4
         configs.cfgfile = os.path.join(configs.model_path, 'config', 'complex_yolov4.cfg')
         configs.conf_thresh = 0.5
+        configs.min_iou = 0.5
         configs.distributed = False
         configs.img_size = 608
         configs.nms_thresh = 0.4
@@ -64,13 +65,14 @@ def load_configs_model(model_name='darknet', configs=None):
 
         configs.model_path = os.path.join(parent_path, 'tools', 'objdet_models', 'resnet')
         configs.pretrained_filename = os.path.join(configs.model_path, 'pretrained', 'fpn_resnet_18_epoch_300.pth')
+        configs.min_iou = 0.5
         configs.saved_fn = "fpn_resnet_18"                  # The name using for saving logs, models,...
         configs.arch = "fpn_resnet"                         # The name of the model architecture
         configs.K = 50                                      # The number of top K
         configs.no_cuda = False                             # If true, cuda is not used
         configs.gpu_idx = 0                                 # GPU index to use
-        configs.img_size = 608                              # Input image size
-        configs.batch_size = 4                              # Mini-batch size
+        configs.output_width = 608                          # Input image size
+        configs.batch_size = 1                              # Mini-batch size
         configs.conf_thresh = 0.5                           # Confidence threshold
         configs.nms_thresh = 0.4                            # NMS threshold
         configs.num_samples = None                          # Take a subset of the dataset to run and debug
@@ -79,7 +81,7 @@ def load_configs_model(model_name='darknet', configs=None):
         configs.peak_thresh = 0.2                           # Threshold for peak detection
         configs.save_test_output = False                    # Save test output
         configs.output_format = "image"                     # The type of the test output (support image or video)
-        configs.output_video_fn = "out_fpn_resnet_18"       # The video filename if the output format is video
+        configs.output_video_fn = "out_fpn_resnet"          # The video filename if the output format is video
         configs.output_width = 608                          # the width of showing output, the height maybe vary
         configs.pin_memory = True                           # Pin memory in data loader
         configs.distributed = False                         # For testing on 1 GPU only
@@ -234,7 +236,7 @@ def detect_objects(input_bev_maps, model, configs):
     objects = [] 
 
     # Step 1 : check whether there are any detections
-    if not detections:
+    if len(detections) == 0:
         return objects
 
     # Step 2 : loop over all detections

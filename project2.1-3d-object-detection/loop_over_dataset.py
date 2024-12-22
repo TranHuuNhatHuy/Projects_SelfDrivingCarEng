@@ -82,7 +82,7 @@ task_prep_configs = {
     },
     "ID_S3_EX_all": {
         "data_filename": sequence_1,
-        "show_only_frames": [50, 51],
+        "show_only_frames": [0, 200],
         "exec_data": ['pcl_from_rangeimage', 'load_image'],
         "exec_detection": ['bev_from_pcl', 'detect_objects'],
         "exec_tracking": [],
@@ -100,7 +100,7 @@ task_prep_configs = {
     }
 }
 
-current_task = "ID_S2_EX_all"
+current_task = "ID_S1_EX2"
 
 ## Select Waymo Open Dataset file and frame numbers
 
@@ -334,7 +334,7 @@ while True:
 
 ## Evaluate object detection performance
 if 'show_detection_performance' in exec_list:
-    eval.compute_performance_stats(det_performance_all, configs_det)
+    eval.compute_performance_stats(det_performance_all)
 
 ## Plot RMSE for all tracks
 if 'show_tracks' in exec_list:

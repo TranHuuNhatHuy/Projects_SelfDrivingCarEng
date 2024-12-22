@@ -111,6 +111,7 @@ def compute_performance_stats(det_performance_all):
     ious = []
     center_devs = []
     pos_negs = []
+    print(det_performance_all)
     for item in det_performance_all:
         ious.append(item[0])
         center_devs.append(item[1])
