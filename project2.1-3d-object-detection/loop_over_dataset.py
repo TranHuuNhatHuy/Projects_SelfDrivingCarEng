@@ -95,7 +95,7 @@ task_prep_configs = {
     },
     "ID_S4_EX_all": {
         "data_filename": sequence_1,
-        "show_only_frames": [0, 200],
+        "show_only_frames": [0, 199],
         "exec_data": ['pcl_from_rangeimage'],
         "exec_detection": ['bev_from_pcl', 'detect_objects', 'validate_object_labels', 'measure_detection_performance'],
         "exec_tracking": [],
