@@ -244,10 +244,12 @@ def detect_objects(input_bev_maps, model, configs):
         this_id, this_x, this_y, this_z, this_h, this_w, this_l, this_yaw = det
 
         # Step 3 : perform the conversion using the limits for x, y and z set in the configs structure
-        x = this_y * (configs.lim_x[1] - configs.lim_x[0]) / configs.bev_height
-        y = this_x * (configs.lim_y[1] - configs.lim_y[0]) / configs.bev_width
-        w = this_w * (configs.lim_y[1] - configs.lim_y[0]) / configs.bev_width
-        l = this_l * (configs.lim_x[1] - configs.lim_x[0]) / configs.bev_height
+        deltalim_x = configs.lim_x[1] - configs.lim_x[0]
+        deltalim_y = configs.lim_y[1] - configs.lim_y[0]
+        x = this_y * deltalim_x / configs.bev_height
+        y = this_x * deltalim_y / configs.bev_width - deltalim_y / 2
+        w = this_w * deltalim_y / configs.bev_width
+        l = this_l * deltalim_x / configs.bev_height
         z = this_z
         yaw = this_yaw
         h = this_h
@@ -258,7 +260,7 @@ def detect_objects(input_bev_maps, model, configs):
             (y >= configs.lim_y[0]) and (y <= configs.lim_y[1]) and
             (z >= configs.lim_z[0]) and (z <= configs.lim_z[1])
         ):
-            objects.append([x, y, z, h, w, l, this_h, yaw]
+            objects.append([1, x, y, z, h, w, l, yaw]
         )
         
     # =============================================================================================== #

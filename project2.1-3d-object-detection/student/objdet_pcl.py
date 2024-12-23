@@ -46,7 +46,7 @@ def show_pcl(pcl):
     visualizer = open3d.visualization.VisualizerWithKeyCallback()
     visualizer.create_window(
         window_name = name_window,
-        width = 1280, height = 720,
+        width = 1920, height = 1080,
     )
     visualizer.register_key_callback(262, lambda vis: vis.destroy_window())
     
@@ -74,8 +74,8 @@ def show_range_image(frame: dataset_pb2.Frame, lidar_name: int):
 
     # Step 1 : extract lidar data and range image for the roof-mounted lidar
     laser_data = [
-        laser for laser in frame.lasers
-        if laser.name == lidar_name
+        obj for obj in frame.lasers
+        if obj.name == lidar_name
     ][0]
     range_img = []
     if len(laser_data.ri_return1.range_image_compressed) > 0:
@@ -92,12 +92,17 @@ def show_range_image(frame: dataset_pb2.Frame, lidar_name: int):
     inten_channel = range_img[:, :, 1]
     
     # Step 3 : set values <0 to zero
-    np.clip(
+    # Clip according to paper
+    if lidar_name is dataset_pb2.LaserName.TOP:
+        max_range = 75
+    else:
+        max_range = 20
+    range_channel = np.clip(
         range_channel,
-        0,
-        75 if lidar_name is dataset_pb2.LaserName.TOP else 20,  # According to the paper
+        0, max_range
     )
-    
+    inten_channel[inten_channel < 0] = 0.0
+
     # Step 4 : map the range channel onto an 8-bit scale
     # Make sure that the full range of values is appropriately considered
     range_channel = (range_channel / (np.amax(range_channel) - np.amin(range_channel)) * 255.0).astype(np.uint8)
@@ -106,7 +111,7 @@ def show_range_image(frame: dataset_pb2.Frame, lidar_name: int):
     # Normalize with the difference between the 1- and 99-percentile for outlier mitigation
     inten_min = np.percentile(inten_channel, 1)
     inten_max = np.percentile(inten_channel, 99)
-    np.clip(
+    inten_channel = np.clip(
         inten_channel,
         inten_min, 
         inten_max
@@ -145,13 +150,13 @@ def bev_from_pcl(lidar_pcl, configs):
     bev_interval = (configs.lim_x[1] - configs.lim_x[0]) / configs.bev_height
 
     # Step 2 : create a copy of the lidar pcl and transform all metrix x-coordinates into bev-image coordinates
-    lidar_pcl_cpy = lidar_pcl.copy()
-    lidar_pcl_cpy[:, 0] = np.floor((lidar_pcl_cpy[:, 0]) / bev_interval).astype(int)
+    lidar_pcl_cpy = np.copy(lidar_pcl)
+    lidar_pcl_cpy[:, 0] = (np.floor((lidar_pcl_cpy[:, 0]) / bev_interval)).astype(int)
 
     # Step 3 : perform the same operation as in step 2 for the y-coordinates but make sure that no negative bev-coordinates occur
     bev_offset = (configs.bev_width + 1) / 2
-    lidar_pcl_cpy[:, 1] = np.floor((lidar_pcl_cpy[:, 1] / bev_interval) + bev_offset).astype(int)
-    lidar_pcl_cpy[lidar_pcl_cpy < 0] = 0.0
+    lidar_pcl_cpy[:, 1] = (np.floor((lidar_pcl_cpy[:, 1] / bev_interval) + bev_offset)).astype(int)
+    lidar_pcl_cpy[lidar_pcl_cpy < 0] = 0
 
     # Step 4 : visualize point-cloud using the function show_pcl from a previous task
     show_pcl(lidar_pcl_cpy)
@@ -168,7 +173,7 @@ def bev_from_pcl(lidar_pcl, configs):
     lidar_pcl_cpy[lidar_pcl_cpy[:, 3] > 1.0, 3] = 1.0
 
     # Step 2 : re-arrange elements in lidar_pcl_cpy by sorting first by x, then y, then -z (use numpy.lexsort)
-    lidar_pcl_rearranged = lidar_pcl_cpy[
+    lidar_pcl_cpy = lidar_pcl_cpy[
         np.lexsort(keys = (
             -lidar_pcl_cpy[:, 2], 
             lidar_pcl_cpy[:, 1], 
@@ -179,7 +184,7 @@ def bev_from_pcl(lidar_pcl, configs):
     # Step 3 : extract all points with identical x and y such that only the top-most z-coordinate is kept (use numpy.unique)
     # Also, store the number of points per x,y-cell in a variable named "counts" for use in the next task
     _, lidar_pcl_unique_index, counts = np.unique(
-        lidar_pcl_rearranged[ : , 0 : 2], 
+        lidar_pcl_cpy[ : , 0 : 2], 
         axis = 0, 
         return_index = True, 
         return_counts = True
@@ -193,10 +198,13 @@ def bev_from_pcl(lidar_pcl, configs):
     intensity_map[
         np.int_(lidar_pcl_top[:, 0]), 
         np.int_(lidar_pcl_top[:, 1])
-    ] = lidar_pcl_top[:, 3] / (np.amax(lidar_pcl_intensity) - np.amin(lidar_pcl_intensity))
+    ] = np.clip(
+        lidar_pcl_intensity / (np.amax(lidar_pcl_intensity) - np.amin(lidar_pcl_intensity)),
+        0, 1
+    )
 
     # Step 5 : temporarily visualize the intensity map using OpenCV to make sure that vehicles separate well from the background
-    inten_img = (intensity_map * 256).astype(np.uint8)
+    inten_img = (intensity_map * 256.0).astype(np.uint8)
     cv2.imshow(name_BEV_inten_window, inten_img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()

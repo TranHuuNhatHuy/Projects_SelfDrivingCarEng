@@ -82,7 +82,7 @@ task_prep_configs = {
     },
     "ID_S3_EX_all": {
         "data_filename": sequence_1,
-        "show_only_frames": [0, 200],
+        "show_only_frames": [50, 51],
         "exec_data": ['pcl_from_rangeimage', 'load_image'],
         "exec_detection": ['bev_from_pcl', 'detect_objects'],
         "exec_tracking": [],
@@ -91,7 +91,7 @@ task_prep_configs = {
     },
     "ID_S4_EX_all": {
         "data_filename": sequence_1,
-        "show_only_frames": [0, 1],
+        "show_only_frames": [50, 51],
         "exec_data": ['pcl_from_rangeimage'],
         "exec_detection": ['bev_from_pcl', 'detect_objects', 'validate_object_labels', 'measure_detection_performance'],
         "exec_tracking": [],
@@ -100,7 +100,7 @@ task_prep_configs = {
     }
 }
 
-current_task = "ID_S1_EX2"
+current_task = "ID_S3_EX_all"
 
 ## Select Waymo Open Dataset file and frame numbers
 
