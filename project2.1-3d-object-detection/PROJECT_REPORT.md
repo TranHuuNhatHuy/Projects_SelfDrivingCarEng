@@ -12,7 +12,7 @@ There are 3 training segments from [Waymo Open Dataset](https://waymo.com/open/)
 
 ### 1. Visualize range image channels (ID_S1_EX1)
 
-In this task, a lidar range image from the  is given, which is extracted and visualized in a grayscale format, as seen below.
+In this task, a lidar range image from the Waymo Open Dataset is given, which is extracted and visualized in a grayscale format, as seen below (please note that range image is cropped to +/- 90 degrees from the original range data).
 
 ![Sequence 1, frame 0](img/report_imgs/image.png)
 
@@ -31,7 +31,21 @@ The goal of this task is to use the Open3D library to display the lidar point-cl
 
 ![alt text](img/report_imgs/image-3.png)
 
-In the last 2 images, you can see more than 10 vehicles, mostly cars and some trucks. 
+![alt text](img/report_imgs/image-10.png)
+
+![alt text](img/report_imgs/image-11.png)
+
+![alt text](img/report_imgs/image-12.png)
+
+![alt text](img/report_imgs/image-13.png)
+
+![alt text](img/report_imgs/image-14.png)
+
+![alt text](img/report_imgs/image-15.png)
+
+![alt text](img/report_imgs/image-16.png)
+
+In the above images, you can see more than 10 vehicles and their perspectives/features, mostly cars and some trucks. 
 
 We can observe a varying visibility between different cars, particularly depending on their relative locations to the ego vehicle. While most vehicles can be recognized, those far away from the ego, or behind other vehicles in the line-of-sight of the ego, tend to have lower visibility, which is pretty much obvious considering the way LiDAR works.
 

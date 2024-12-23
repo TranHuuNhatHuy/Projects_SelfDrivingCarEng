@@ -86,6 +86,13 @@ def show_range_image(frame: dataset_pb2.Frame, lidar_name: int):
             )
         )
         range_img = np.array(range_img.data).reshape(range_img.shape.dims)
+
+    # Crop range image to +/- 90 deg around x-axis
+    if lidar_name is dataset_pb2.LaserName.TOP:
+        width = range_img.shape[1]
+        mid = width // 2 
+        crop_width = width // 4  # Half 180-deg range (90 deg left and right)
+        range_img = range_img[:, mid - crop_width: mid + crop_width, :]
     
     # Step 2 : extract the range and the intensity channel from the range image
     range_channel = range_img[:, :, 0]
