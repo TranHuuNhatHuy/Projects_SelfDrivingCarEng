@@ -63,6 +63,7 @@ task_prep_configs = {
         "exec_detection": [],
         "exec_tracking": [],
         "exec_visualization": ['show_range_image'],
+        "mid-visualize": True
     },
     "ID_S1_EX2": {
         "data_filename": sequence_3,
@@ -71,6 +72,7 @@ task_prep_configs = {
         "exec_detection": [],
         "exec_tracking": [],
         "exec_visualization": ['show_pcl'],
+        "mid-visualize": True
     },
     "ID_S2_EX_all": {
         "data_filename": sequence_1,
@@ -79,6 +81,7 @@ task_prep_configs = {
         "exec_detection": ['bev_from_pcl'],
         "exec_tracking": [],
         "exec_visualization": [],
+        "mid-visualize": True
     },
     "ID_S3_EX_all": {
         "data_filename": sequence_1,
@@ -88,24 +91,27 @@ task_prep_configs = {
         "exec_tracking": [],
         "exec_visualization": ['show_objects_in_bev_labels_in_camera'],
         "configs_det": "fpn_resnet",
+        "mid-visualize": True
     },
     "ID_S4_EX_all": {
         "data_filename": sequence_1,
-        "show_only_frames": [50, 51],
+        "show_only_frames": [0, 200],
         "exec_data": ['pcl_from_rangeimage'],
         "exec_detection": ['bev_from_pcl', 'detect_objects', 'validate_object_labels', 'measure_detection_performance'],
         "exec_tracking": [],
         "exec_visualization": ['show_detection_performance'],
         "configs_det": "darknet",
+        "mid-visualize": False
     }
 }
 
-current_task = "ID_S3_EX_all"
+current_task = "ID_S4_EX_all"
 
 ## Select Waymo Open Dataset file and frame numbers
 
 data_filename = task_prep_configs[current_task]["data_filename"]
 show_only_frames = task_prep_configs[current_task]["show_only_frames"] # show only frames in interval for debugging
+visualize = task_prep_configs[current_task]["mid-visualize"]
 
 ## Prepare Waymo Open Dataset file for loading
 data_fullpath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'dataset', data_filename) # adjustable path in case this script is called from another working directory
@@ -190,7 +196,7 @@ while True:
         ## Compute lidar birds-eye view (bev)
         if 'bev_from_pcl' in exec_list:
             print('computing birds-eye view from lidar pointcloud')
-            lidar_bev = pcl.bev_from_pcl(lidar_pcl, configs_det)
+            lidar_bev = pcl.bev_from_pcl(lidar_pcl, configs_det, visualize)
         else:
             print('loading birds-eve view from result file')
             lidar_bev = load_object_from_file(results_fullpath, data_filename, 'lidar_bev', cnt_frame)

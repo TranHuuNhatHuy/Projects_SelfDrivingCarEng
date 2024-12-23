@@ -128,7 +128,7 @@ def show_range_image(frame: dataset_pb2.Frame, lidar_name: int):
 
 
 # Create birds-eye view of lidar data
-def bev_from_pcl(lidar_pcl, configs):
+def bev_from_pcl(lidar_pcl, configs, visualize = True):
 
     # Remove lidar points outside detection area and with too low reflectivity
     range_pcl = lidar_pcl[:, 0]
@@ -159,7 +159,8 @@ def bev_from_pcl(lidar_pcl, configs):
     lidar_pcl_cpy[lidar_pcl_cpy < 0] = 0
 
     # Step 4 : visualize point-cloud using the function show_pcl from a previous task
-    show_pcl(lidar_pcl_cpy)
+    if visualize:
+        show_pcl(lidar_pcl_cpy)
 
     # =============================================================================================== #    
     
@@ -204,10 +205,11 @@ def bev_from_pcl(lidar_pcl, configs):
     )
 
     # Step 5 : temporarily visualize the intensity map using OpenCV to make sure that vehicles separate well from the background
-    inten_img = (intensity_map * 256.0).astype(np.uint8)
-    cv2.imshow(name_BEV_inten_window, inten_img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    if visualize:
+        inten_img = (intensity_map * 256.0).astype(np.uint8)
+        cv2.imshow(name_BEV_inten_window, inten_img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     # =============================================================================================== #
 
@@ -228,10 +230,11 @@ def bev_from_pcl(lidar_pcl, configs):
     ] = lidar_pcl_top[:, 2] / float(np.abs(configs.lim_z[1] - configs.lim_z[0]))
 
     # Step 3 : temporarily visualize the intensity map using OpenCV to make sure that vehicles separate well from the background
-    height_img = (height_map * 256).astype(np.uint8)
-    cv2.imshow(name_BEV_height_window, height_img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    if visualize:
+        height_img = (height_map * 256).astype(np.uint8)
+        cv2.imshow(name_BEV_height_window, height_img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     # =============================================================================================== #
 

@@ -66,9 +66,9 @@ def measure_detection_performance(detections, labels, labels_valid, min_iou=0.5)
                 )
                 
                 # Step 4 : computer the center distance between label and detection bounding-box in x, y, and z
-                dx = np.array(box.center_x - this_x).item()
-                dy = np.array(box.center_y - this_y).item()
-                dz = np.array(box.center_z - this_z).item()
+                dx = box.center_x - this_x
+                dy = box.center_y - this_y
+                dz = box.center_z - this_z
                 
                 # Step 5 : compute the intersection over union (IOU) between label and detection bounding-box
                 intersect = Polygon(bounding_box).intersection(Polygon(detected_box)).area
@@ -92,13 +92,18 @@ def measure_detection_performance(detections, labels, labels_valid, min_iou=0.5)
 
     # ======================================= ID_S4_EX2 START ======================================= #
 
-    all_positives = sum(labels_valid)
+    all_positives = labels_valid.sum()
     false_positives = len(detections) - true_positives
     false_negatives = all_positives - true_positives
 
     # =============================================================================================== #
     
-    pos_negs = [all_positives, true_positives, false_negatives, false_positives]
+    pos_negs = [
+        all_positives, 
+        true_positives, 
+        false_negatives, 
+        false_positives
+    ]
     det_performance = [ious, center_devs, pos_negs]
     
     return det_performance
@@ -111,7 +116,6 @@ def compute_performance_stats(det_performance_all):
     ious = []
     center_devs = []
     pos_negs = []
-    print(det_performance_all)
     for item in det_performance_all:
         ious.append(item[0])
         center_devs.append(item[1])
@@ -123,10 +127,10 @@ def compute_performance_stats(det_performance_all):
     count_p, count_tp, count_fn, count_fp = np.asarray(pos_negs).sum(axis = 0)
     
     # Step 2 : compute precision
-    precision = count_tp / (count_tp + count_fp) if count_tp + count_fp > 0 else 0.0
+    precision = float(count_tp / (count_tp + count_fp)) if count_tp + count_fp > 0 else 0.0
 
     # Step 3 : compute recall
-    recall = count_tp / (count_tp + count_fn) if count_tp + count_fn > 0 else 0.0
+    recall = float(count_tp / (count_tp + count_fn)) if count_tp + count_fn > 0 else 0.0
 
     # =============================================================================================== #
 
