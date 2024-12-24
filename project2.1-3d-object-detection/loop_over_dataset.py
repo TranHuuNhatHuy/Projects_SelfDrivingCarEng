@@ -102,10 +102,21 @@ task_prep_configs = {
         "exec_visualization": ['show_detection_performance'],
         "configs_det": "darknet",
         "mid-visualize": False
+    },
+    "FINAL_S1": {
+        "data_filename": sequence_2,
+        "show_only_frames": [150, 200],
+        "lim_y" : [-5, 10],
+        "exec_data": ['pcl_from_rangeimage'],
+        "exec_detection": [],
+        "exec_tracking": ['perform_tracking'],
+        "exec_visualization": ['show_tracks'],
+        "configs_det": "fpn_resnet",
+        "mid-visualize": True
     }
 }
 
-current_task = "ID_S1_EX2"
+current_task = "FINAL_S1"
 
 ## Select Waymo Open Dataset file and frame numbers
 
@@ -129,7 +140,10 @@ model_det = det.create_model(configs_det)
 configs_det.use_labels_as_objects = False # True = use groundtruth labels as objects, False = use model-based detection
 
 ## Uncomment this setting to restrict the y-range in the final project
-# configs_det.lim_y = [-25, 25] 
+if ("lim_y" in task_prep_configs[current_task].keys()):
+    configs_det.lim_y = task_prep_configs[current_task]["lim_y"]
+else:
+    configs_det.lim_y = [-25, 25]
 
 ## Initialize tracking
 KF = Filter() # set up Kalman filter 
