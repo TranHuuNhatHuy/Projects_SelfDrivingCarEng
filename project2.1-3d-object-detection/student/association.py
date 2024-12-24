@@ -32,72 +32,86 @@ class Association:
         
     def associate(self, track_list, meas_list, KF):
              
-        ############
-        # TODO Step 3: association:
-        # - replace association_matrix with the actual association matrix based on Mahalanobis distance (see below) for all tracks and all measurements
+        # Association
+        # - replace association_matrix with the actual association matrix
+        #   based on Mahalanobis distance (see below) for all tracks and all measurements
         # - update list of unassigned measurements and unassigned tracks
-        ############
         
-        # the following only works for at most one track and one measurement
-        self.association_matrix = np.matrix([]) # reset matrix
-        self.unassigned_tracks = [] # reset lists
-        self.unassigned_meas = []
+        track_length = len(track_list)
+        meas_length = len(meas_list)
+        self.association_matrix = np.inf * np.ones((track_length, meas_length))
+        self.unassigned_tracks = list(range(track_length))
+        self.unassigned_meas = list(range(meas_length))
         
-        if len(meas_list) > 0:
-            self.unassigned_meas = [0]
-        if len(track_list) > 0:
-            self.unassigned_tracks = [0]
-        if len(meas_list) > 0 and len(track_list) > 0: 
-            self.association_matrix = np.matrix([[0]])
-        
-        ############
-        # END student code
-        ############ 
+        # Calculate association matrix
+        for i, track in enumerate(track_list):
+            for j, meas in enumerate(meas_list):
+                if self.gating(self.MHD(track, meas, KF), meas.sensor):
+                    self.association_matrix[i, j] = self.MHD(track, meas, KF)
                 
     def get_closest_track_and_meas(self):
-        ############
-        # TODO Step 3: find closest track and measurement:
+        
+        # Find closest track and measurement
         # - find minimum entry in association matrix
         # - delete row and column
         # - remove corresponding track and measurement from unassigned_tracks and unassigned_meas
         # - return this track and measurement
-        ############
-
-        # the following only works for at most one track and one measurement
-        update_track = 0
-        update_meas = 0
-        
-        # remove from list
-        self.unassigned_tracks.remove(update_track) 
-        self.unassigned_meas.remove(update_meas)
-        self.association_matrix = np.matrix([])
             
-        ############
-        # END student code
-        ############ 
-        return update_track, update_meas     
+        association_matrix = self.association_matrix
+
+        # Find minimum entry in association matrix
+        min_ind = np.unravel_index(
+            np.argmin(association_matrix), 
+            association_matrix.shape
+        )
+        track_ind = min_ind[0]
+        meas_ind = min_ind[1]
+
+        # Prepare for next iteration
+        association_matrix = np.delete(
+            association_matrix, 
+            track_ind, 
+            axis = 0
+        )
+        association_matrix = np.delete(
+            association_matrix,
+            meas_ind,
+            axis = 1
+        )
+        self.association_matrix = association_matrix
+
+        # Update track and measurement
+        track_updated = self.unassigned_tracks[track_ind]
+        meas_updated = self.unassigned_meas[meas_ind]
+
+        # Remove track and measurement from list
+        self.unassigned_tracks.remove(track_updated)
+        self.unassigned_meas.remove(meas_updated)
+
+        return track_updated, meas_updated
 
     def gating(self, MHD, sensor): 
-        ############
-        # TODO Step 3: return True if measurement lies inside gate, otherwise False
-        ############
+
+        # Return True if measurement lies inside gate, otherwise False
         
-        pass    
-        
-        ############
-        # END student code
-        ############ 
+        gate_threshold = chi2.ppf(
+            params.gating_threshold,
+            sensor.dim_meas
+        )
+
+        return (MHD < gate_threshold)
         
     def MHD(self, track, meas, KF):
-        ############
-        # TODO Step 3: calculate and return Mahalanobis distance
-        ############
         
-        pass
+        # Calculate and return Mahalanobis distance
         
-        ############
-        # END student code
-        ############ 
+        sensor = meas.sensor
+        H = sensor.get_H(track.x)
+        gamma = KF.gamma(track, meas)
+        S = H * track.P * H.T + meas.R
+        MHD = gamma.T * S.I * gamma
+
+        return MHD
     
     def associate_and_update(self, manager, meas_list, KF):
         # associate measurements and tracks
