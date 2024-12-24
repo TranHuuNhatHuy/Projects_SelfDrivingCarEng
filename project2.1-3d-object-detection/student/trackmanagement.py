@@ -28,32 +28,30 @@ class Track:
         print('creating track no.', id)
         M_rot = meas.sensor.sens_to_veh[0:3, 0:3] # rotation matrix from sensor to vehicle coordinates
         
-        ############
-        # TODO Step 2: initialization:
-        # - replace fixed track initialization values by initialization of x and P based on 
-        # unassigned measurement transformed from sensor to vehicle coordinates
-        # - initialize track state and track score with appropriate values
-        ############
+        # Initialization
+        # - Replace fixed track initialization values by initialization of x and P
+        #   based on unassigned measurement transformed from sensor to vehicle coords
+        # - Initialize track state and track score with appropriate values
 
-        self.x = np.matrix([[49.53980697],
-                        [ 3.41006279],
-                        [ 0.91790581],
-                        [ 0.        ],
-                        [ 0.        ],
-                        [ 0.        ]])
-        self.P = np.matrix([[9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 9.0e-02, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 6.4e-03, 0.0e+00, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+03, 0.0e+00],
-                        [0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 0.0e+00, 2.5e+01]])
-        self.state = 'confirmed'
-        self.score = 0
+        # Init x
+        self.x = np.zeros((6, 1))
+        pos_sensor = np.ones((4, 1))
+        pos_sensor[0 : 3] = meas.z[0 : 3]
+        pos_vehicle = meas.sensor.sens_to_veh * pos_sensor
+        self.x[0 : 3] = pos_vehicle[0 : 3]
+
+        # Init P
+        self.P = np.zeros((6, 6))
+        self.P[0 : 3, 0 : 3] = M_rot * meas.R * M_rot.T
+        self.P[3 : 6, 3 : 6] = np.matrix([
+            [params.sigma_p44**2, 0, 0],
+            [0, params.sigma_p55**2, 0],
+            [0, 0, params.sigma_p66**2]
+        ])
+
+        self.state = "Initialized"
+        self.score = 1 / params.window
         
-        ############
-        # END student code
-        ############ 
-               
         # other track attributes
         self.id = id
         self.width = meas.width
@@ -93,12 +91,12 @@ class Trackmanagement:
         self.result_list = []
         
     def manage_tracks(self, unassigned_tracks, unassigned_meas, meas_list):  
-        ############
-        # TODO Step 2: implement track management:
+    
+        # Implement track management:
         # - decrease the track score for unassigned tracks
-        # - delete tracks if the score is too low or P is too big (check params.py for parameters that might be helpful, but
-        # feel free to define your own parameters)
-        ############
+        # - delete tracks if the score is too low or P is too big
+        #   (check params.py for parameters that might be helpful, but
+        #   feel free to define your own parameters)
         
         # decrease score for unassigned tracks
         for i in unassigned_tracks:
@@ -106,14 +104,14 @@ class Trackmanagement:
             # check visibility    
             if meas_list: # if not empty
                 if meas_list[0].sensor.in_fov(track.x):
-                    # your code goes here
-                    pass 
+                    track.score = track.score - 1 / params.window
 
-        # delete old tracks   
-
-        ############
-        # END student code
-        ############ 
+        # delete old tracks  
+        for track in self.track_list:
+            if (track.score < params.delete_threshold) and (track.state == "Confirmed"):
+                self.delete_track(track) 
+            if (track.P[0, 0] > params.max_P) or (track.P[1, 1] > params.max_P) or (track.P[2, 2] > params.max_P):
+                self.delete_track(track)
             
         # initialize new track with unassigned measurement
         for j in unassigned_meas: 
@@ -134,14 +132,12 @@ class Trackmanagement:
         self.track_list.remove(track)
         
     def handle_updated_track(self, track):      
-        ############
-        # TODO Step 2: implement track management for updated tracks:
+        # Implement track management for updated tracks:
         # - increase track score
-        # - set track state to 'tentative' or 'confirmed'
-        ############
+        # - set track state to "Tentative" or "Confirmed"
 
-        pass
-        
-        ############
-        # END student code
-        ############ 
+        track.score = track.score + 1 / params.window
+        if (track.score >= params.confirmed_threshold):
+            track.state = "Confirmed"
+        else:
+            track.state = "Tentative"

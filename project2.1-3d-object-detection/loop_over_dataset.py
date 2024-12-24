@@ -113,10 +113,21 @@ task_prep_configs = {
         "exec_visualization": ['show_tracks'],
         "configs_det": "fpn_resnet",
         "mid-visualize": True
-    }
+    },
+    "FINAL_S2": {
+        "data_filename": sequence_2,
+        "show_only_frames": [65, 100],
+        "lim_y" : [-5, 15],
+        "exec_data": ['pcl_from_rangeimage'],
+        "exec_detection": [],
+        "exec_tracking": ['perform_tracking'],
+        "exec_visualization": ['show_tracks'],
+        "configs_det": "fpn_resnet",
+        "mid-visualize": True
+    },
 }
 
-current_task = "FINAL_S1"
+current_task = "FINAL_S2"
 
 ## Select Waymo Open Dataset file and frame numbers
 
