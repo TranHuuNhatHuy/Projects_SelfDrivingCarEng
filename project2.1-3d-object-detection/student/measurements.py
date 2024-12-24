@@ -43,16 +43,20 @@ class Sensor:
     
     def in_fov(self, x):
         # check if an object x can be seen by this sensor
-        ############
-        # TODO Step 4: implement a function that returns True if x lies in the sensor's field of view, 
-        # otherwise False.
-        ############
-
-        return True
         
-        ############
-        # END student code
-        ############ 
+        # Implement a function that returns True if x lies in the sensor's field of view, 
+        # otherwise False.
+        
+        pos_vehicle = np.ones((4, 1))
+        pos_vehicle[0 : 3] = x[0 : 3]
+        pos_sensor = self.veh_to_sens * pos_vehicle
+
+        if (pos_sensor[0] > 0):
+            alpha = np.arctan(pos_sensor[1] / pos_sensor[0])
+            if (self.fov[0] <= alpha <= self.fov[1]):
+                return True
+            
+        return False
              
     def get_hx(self, x):    
         # calculate nonlinear measurement expectation value h(x)   
@@ -63,19 +67,27 @@ class Sensor:
             return pos_sens[0:3]
         elif self.name == 'camera':
             
-            ############
-            # TODO Step 4: implement nonlinear camera measurement function h:
+            # Implement nonlinear camera measurement function h
             # - transform position estimate from vehicle to camera coordinates
             # - project from camera to image coordinates
             # - make sure to not divide by zero, raise an error if needed
             # - return h(x)
-            ############
 
-            pass
-        
-            ############
-            # END student code
-            ############ 
+            pos_vehicle = np.ones((4, 1))
+            pos_vehicle[0 : 3] = x[0 : 3]
+            pos_sensor = self.veh_to_sens * pos_vehicle
+            px = pos_sensor[0]
+            py = pos_sensor[1]
+            pz = pos_sensor[2]
+
+            hx = np.zeros((2, 1))
+            if (px == 0):
+                raise ValueError("Division by zero caused by px = 0.")
+            else:
+                hx[0, 0] = self.c_i - self.f_i * py / px
+                hx[1, 0] = self.c_j - self.f_j * pz / px
+
+                return hx
         
     def get_H(self, x):
         # calculate Jacobian H at current x from h(x)
@@ -111,22 +123,15 @@ class Sensor:
         
     def generate_measurement(self, num_frame, z, meas_list):
         # generate new measurement from this sensor and add to measurement list
-        ############
-        # TODO Step 4: remove restriction to lidar in order to include camera as well
-        ############
         
-        if self.name == 'lidar':
-            meas = Measurement(num_frame, z, self)
-            meas_list.append(meas)
+        # Remove restriction to lidar in order to include camera as well
+        
+        meas = Measurement(num_frame, z, self)
+        meas_list.append(meas)
+
         return meas_list
         
-        ############
-        # END student code
-        ############ 
-        
-        
-################### 
-        
+                
 class Measurement:
     '''Measurement class including measurement values, covariance, timestamp, sensor'''
     def __init__(self, num_frame, z, sensor):
@@ -152,12 +157,21 @@ class Measurement:
             self.yaw = z[6]
         elif sensor.name == 'camera':
             
-            ############
-            # TODO Step 4: initialize camera measurement including z and R 
-            ############
+            # Initialize camera measurement including z and R 
+            sigma_camera_i = params.sigma_cam_i
+            sigma_camera_j = params.sigma_cam_j
 
-            pass
-        
-            ############
-            # END student code
-            ############ 
+            # Initialize measurement vector z
+            self.z = np.zeros((
+                sensor.dim_meas, 
+                1
+            ))
+            self.z[0] = z[0]
+            self.z[1] = z[1]
+
+            # Initialize sensor
+            self.sensor = sensor
+            self.R = np.matrix([
+                [sigma_camera_i**2, 0],
+                [0, sigma_camera_j**2]
+            ])
