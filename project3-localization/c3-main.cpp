@@ -200,17 +200,54 @@ int main(){
 		if(!new_scan){
 			
 			new_scan = true;
-			// TODO: (Filter scan using voxel filter)
+			
+			// ============================== Step 1: Filter scan using voxel filter
 
-			// TODO: Find pose transform by using ICP or NDT matching
-			//pose = ....
+			// Create VoxelGrid filter to downsample input pcl
+			pcl::VoxelGrid<PointT> vg;
+			vg.setInputCloud(scanCloud);
 
-			// TODO: Transform scan so it aligns with ego's actual pose and render that scan
+			// Set filter leaf size
+			float leafSize = 0.5f;
+			vg.setLeafSize(leafSize, leafSize, leafSize);
+			typename pcl::PointCloud<PointT>::Ptr cloudFiltered (new pcl::PointCloud<PointT>);
+			vg.filter(*cloudFiltered);
 
+
+			// ============================== Step 2: Find pose transform by using ICP or NDT matching
+
+			// Initialize NDT for pcl
+			pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> ndt;
+			ndt.setInputSource(cloudFiltered);			// Source: filtered scane
+			ndt.setInputTarget(mapCloud);				// Target: map
+			ndt.setTransformationEpsilon(0.01);			// Min transformation epsilon for convergence
+			ndt.setStepSize(0.1);						// Step size for optimization
+			ndt.setResolution(1.0);						// NDT resolution
+			ndt.setMaximumIterations(35);
+
+			// Initial guess for transformation, based on ego's pose
+			Eigen::Matrix4f guess = transform3D(
+				pose.rotation.yaw, pose.rotation.pitch, pose.rotation.roll, 
+				pose.position.x, pose.position.y, pose.position.z
+			).cast<float>();
+			pcl::PointCloud<pcl::PointXYZ>::Ptr couldFinal (new pcl::PointCloud<pcl::PointXYZ>);
+			ndt.align(*couldFinal, guess);				// Align scan to map
+
+			Eigen::Matrix4d transformation = ndt.getFinalTransformation().cast<double>();
+			pose = getPose(transformation);				// Update ego's pose based on transformation
+
+
+			// ============================== Step 3: Transform scan so it aligns with ego's actual pose and render that scan
+
+			// Apply transformation to filtered scan cloud
+			PointCloudT::Ptr scanCloud (new PointCloudT);
+			pcl::transformPointCloud(*cloudFiltered, *scanCloud, transformation);
+
+			// Render scan in viewer
 			viewer->removePointCloud("scan");
-			// TODO: Change `scanCloud` below to your transformed scan
 			renderPointCloud(viewer, scanCloud, "scan", Color(1,0,0) );
 
+			// Update car pose in viewer
 			viewer->removeAllShapes();
 			drawCar(pose, 1,  Color(0,1,0), 0.35, viewer);
           
