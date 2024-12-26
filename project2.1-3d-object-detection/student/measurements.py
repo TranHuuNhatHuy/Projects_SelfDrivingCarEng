@@ -53,7 +53,7 @@ class Sensor:
 
         if (pos_sensor[0] > 0):
             alpha = np.arctan(pos_sensor[1] / pos_sensor[0])
-            if (self.fov[0] <= alpha <= self.fov[1]):
+            if alpha > self.fov[0] and alpha < self.fov[1]:
                 return True
             
         return False
@@ -62,9 +62,9 @@ class Sensor:
         # calculate nonlinear measurement expectation value h(x)   
         if self.name == 'lidar':
             pos_veh = np.ones((4, 1)) # homogeneous coordinates
-            pos_veh[0:3] = x[0:3] 
+            pos_veh[0 : 3] = x[0 : 3] 
             pos_sens = self.veh_to_sens*pos_veh # transform from vehicle to lidar coordinates
-            return pos_sens[0:3]
+            return pos_sens[0 : 3]
         elif self.name == 'camera':
             
             # Implement nonlinear camera measurement function h
@@ -83,11 +83,10 @@ class Sensor:
             hx = np.zeros((2, 1))
             if (px == 0):
                 raise ValueError("Division by zero caused by px = 0.")
-            else:
-                hx[0, 0] = self.c_i - self.f_i * py / px
-                hx[1, 0] = self.c_j - self.f_j * pz / px
+            hx[0, 0] = self.c_i - self.f_i * py / px
+            hx[1, 0] = self.c_j - self.f_j * pz / px
 
-                return hx
+            return hx
         
     def get_H(self, x):
         # calculate Jacobian H at current x from h(x)

@@ -138,7 +138,7 @@ task_prep_configs = {
     },
     "FINAL_S4": {
         "data_filename": sequence_1,
-        "show_only_frames": [0, 20],
+        "show_only_frames": [0, 200],
         "lim_y" : [-25, 25],
         "exec_data": ['pcl_from_rangeimage'],
         "exec_detection": [],

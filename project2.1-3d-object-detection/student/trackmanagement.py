@@ -49,7 +49,7 @@ class Track:
             [0, 0, params.sigma_p66**2]
         ])
 
-        self.state = "Initialized"
+        self.state = "initialized"
         self.score = 1 / params.window
         
         # other track attributes
@@ -108,8 +108,9 @@ class Trackmanagement:
 
         # delete old tracks  
         for track in self.track_list:
-            if (track.score < params.delete_threshold) and (track.state == "Confirmed"):
-                self.delete_track(track) 
+            if (track.state == "confirmed"):
+                if (track.score < params.delete_threshold):
+                    self.delete_track(track) 
             if (track.P[0, 0] > params.max_P) or (track.P[1, 1] > params.max_P) or (track.P[2, 2] > params.max_P):
                 self.delete_track(track)
             
@@ -138,6 +139,6 @@ class Trackmanagement:
 
         track.score = track.score + 1 / params.window
         if (track.score >= params.confirmed_threshold):
-            track.state = "Confirmed"
+            track.state = "confirmed"
         else:
-            track.state = "Tentative"
+            track.state = "tentative"

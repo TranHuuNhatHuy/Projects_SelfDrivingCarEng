@@ -58,6 +58,8 @@ class Association:
         # - return this track and measurement
             
         association_matrix = self.association_matrix
+        if np.min(association_matrix) == np.inf:
+            return np.nan, np.nan
 
         # Find minimum entry in association matrix
         min_ind = np.unravel_index(
