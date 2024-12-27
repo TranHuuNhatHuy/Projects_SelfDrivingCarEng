@@ -35,6 +35,28 @@ using namespace std;
 #include <pcl/registration/ndt.h>
 #include <pcl/console/time.h>   // TicToc
 
+// ============================== Define global params
+
+// General params
+const static bool USE_ICP = true;				// Use ICP or NDT
+const static std::string BASE_PATH = "../";		// Base path for pcl data (relative to build directory)
+const static double MIN_LIDAR_DIST = 8.0;		// Min lidar distance to consider
+const static int MAX_MAP_POINTS = 5000;			// Max points in map
+const static double VOXEL_LEAF_RES = 0.5;		// Voxel leaf resolution
+
+// ICP params
+const double ICP_MAX_DIST = 5;					// Max distance for ICP
+const int ICP_MAX_ITER = 120;					// Max iterations for ICP
+const double ICP_TRANS_EPS = 1e-4;				// Transformation epsilon for ICP
+const double ICP_FIT_EPS = 2;					// Fit epsilon for ICP
+const double ICP_RANSAC_THRESH = 0.2;			// RANSAC threshold for ICP
+
+// NDT params
+const int NDT_MAX_ITER = 95;					// Max iterations for NDT
+const double NDT_STEP_SIZE = 0.1;				// Step size for NDT
+const double NDT_TRANS_EPS = 1e-4;				// Transformation epsilon for NDT
+const double NDT_RES = 1.0;						// NDT resolution
+
 PointCloudT pclCloud;
 cc::Vehicle::Control control;
 std::chrono::time_point<std::chrono::system_clock> currentTime;
@@ -99,181 +121,117 @@ void drawCar(Pose pose, int num, Color color, double alpha, pcl::visualization::
 	renderBox(viewer, box, num, color, alpha);
 }
 
-int main(){
+bool pointInEgoRange(auto &point) {
+    double distSquared = point.x * point.x + point.y * point.y + point.z * point.z;
+    return distSquared <= MIN_LIDAR_DIST;
+}
 
-	auto client = cc::Client("localhost", 2000);
-	client.SetTimeout(2s);
-	auto world = client.GetWorld();
+void SetupLidar(auto &lidar) {
+    lidar.SetAttribute("upper_fov", "15");
+    lidar.SetAttribute("lower_fov", "-25");
+    lidar.SetAttribute("channels", "32");
+    lidar.SetAttribute("range", "30");
+    lidar.SetAttribute("rotation_frequency", "30");
+    lidar.SetAttribute("points_per_second", "500000");
+}
 
-	auto blueprint_library = world.GetBlueprintLibrary();
-	auto vehicles = blueprint_library->Filter("vehicle");
+void InitNDT(pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> &ndt, PointCloudT &map) {
+    ndt.setTransformationEpsilon(NDT_TRANS_EPS);
+    ndt.setStepSize(NDT_STEP_SIZE);
+    ndt.setResolution(NDT_RES);
+    ndt.setInputTarget(map);
+}
 
-	auto map = world.GetMap();
-	auto transform = map->GetRecommendedSpawnPoints()[1];
-	auto ego_actor = world.SpawnActor((*vehicles)[12], transform);
+Eigen::Matrix4d RunICP(PointCloudT::Ptr target, PointCloudT::Ptr src, Pose3D pose, int iter) {
+    Eigen::Matrix4d transform = transform3D(pose.rotation.yaw, pose.rotation.pitch, pose.rotation.roll,
+                                            pose.position.x, pose.position.y, pose.position.z);
+    PointCloudT::Ptr srcTransformed(new PointCloudT);
+    pcl::transformPointCloud(*src, *srcTransformed, transform);
 
-	//Create lidar
-	auto lidar_bp = *(blueprint_library->Find("sensor.lidar.ray_cast"));
-	// CANDO: Can modify lidar values to get different scan resolutions
-	lidar_bp.SetAttribute("upper_fov", "15");
-    lidar_bp.SetAttribute("lower_fov", "-25");
-    lidar_bp.SetAttribute("channels", "32");
-    lidar_bp.SetAttribute("range", "30");
-	lidar_bp.SetAttribute("rotation_frequency", "60");
-	lidar_bp.SetAttribute("points_per_second", "500000");
+    pcl::IterativeClosestPoint<PointT, PointT> icp;
+    icp.setInputSource(srcTransformed);
+    icp.setInputTarget(target);
+    icp.setMaxCorrespondenceDistance(ICP_MAX_DIST);
+    icp.setMaximumIterations(iter);
+    icp.setTransformationEpsilon(ICP_TRANS_EPS);
+    icp.setEuclideanFitnessEpsilon(ICP_FIT_EPS);
+    icp.setRANSACOutlierRejectionThreshold(ICP_RANSAC_THRESH);
 
-	auto user_offset = cg::Location(0, 0, 0);
-	auto lidar_transform = cg::Transform(cg::Location(-0.5, 0, 1.8) + user_offset);
-	auto lidar_actor = world.SpawnActor(lidar_bp, lidar_transform, ego_actor.get());
-	auto lidar = boost::static_pointer_cast<cc::Sensor>(lidar_actor);
-	bool new_scan = true;
-	std::chrono::time_point<std::chrono::system_clock> lastScanTime, startTime;
+    PointCloudT::Ptr aligned(new PointCloudT);
+    icp.align(*aligned);
 
-	pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
-  	viewer->setBackgroundColor (0, 0, 0);
-	viewer->registerKeyboardCallback(keyboardEventOccurred, (void*)&viewer);
+    return icp.hasConverged() ? icp.getFinalTransformation().cast<double>() * transform : Eigen::Matrix4d::Identity();
+}
 
-	auto vehicle = boost::static_pointer_cast<cc::Vehicle>(ego_actor);
-	Pose pose(Point(0,0,0), Rotate(0,0,0));
+Eigen::Matrix4d RunNDT(pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> &ndt, PointCloudT::Ptr src, Pose3D pose, int iter) {
+    ndt.setMaximumIterations(iter);
+    Eigen::Matrix4f guess = transform3D(pose.rotation.yaw, pose.rotation.pitch, pose.rotation.roll,
+                                        pose.position.x, pose.position.y, pose.position.z).cast<float>();
 
-	// Load map
-	PointCloudT::Ptr mapCloud(new PointCloudT);
-  	pcl::io::loadPCDFile("map.pcd", *mapCloud);
-  	cout << "Loaded " << mapCloud->points.size() << " data points from map.pcd" << endl;
-	renderPointCloud(viewer, mapCloud, "map", Color(0,0,1)); 
+    PointCloudT::Ptr aligned(new PointCloudT);
+    ndt.align(*aligned, guess);
 
-	typename pcl::PointCloud<PointT>::Ptr cloudFiltered (new pcl::PointCloud<PointT>);
-	typename pcl::PointCloud<PointT>::Ptr scanCloud (new pcl::PointCloud<PointT>);
+    return ndt.hasConverged() ? ndt.getFinalTransformation().cast<double>() : Eigen::Matrix4d::Identity();
+}
 
-	lidar->Listen([&new_scan, &lastScanTime, &scanCloud](auto data){
+int main() {
+    carla::client::Client client("localhost", 2000);
+    client.SetTimeout(std::chrono::seconds(2));
 
-		if(new_scan){
-			auto scan = boost::static_pointer_cast<csd::LidarMeasurement>(data);
-			for (auto detection : *scan){
-				if((detection.x*detection.x + detection.y*detection.y + detection.z*detection.z) > 8.0){
-					pclCloud.points.push_back(PointT(detection.x, detection.y, detection.z));
-				}
-			}
-			if(pclCloud.points.size() > 5000){ // CANDO: Can modify this value to get different scan resolutions
-				lastScanTime = std::chrono::system_clock::now();
-				*scanCloud = pclCloud;
-				new_scan = false;
-			}
-		}
-	});
-	
-	Pose poseRef(Point(vehicle->GetTransform().location.x, vehicle->GetTransform().location.y, vehicle->GetTransform().location.z), Rotate(vehicle->GetTransform().rotation.yaw * pi/180, vehicle->GetTransform().rotation.pitch * pi/180, vehicle->GetTransform().rotation.roll * pi/180));
-	double maxError = 0;
+    auto world = client.GetWorld();
+    auto blueprint = world.GetBlueprintLibrary();
+    auto vehicleBp = blueprint->Filter("vehicle")[12];
+    auto spawn = world.GetMap()->GetRecommendedSpawnPoints()[1];
+    auto vehicle = world.SpawnActor(vehicleBp, spawn);
 
-	while (!viewer->wasStopped())
-  	{
-		while(new_scan){
-			std::this_thread::sleep_for(0.1s);
-			world.Tick(1s);
-		}
-		if(refresh_view){
-			viewer->setCameraPosition(pose.position.x, pose.position.y, 60, pose.position.x+1, pose.position.y+1, 0, 0, 0, 1);
-			refresh_view = false;
-		}
-		
-		viewer->removeShape("box0");
-		viewer->removeShape("boxFill0");
-		Pose truePose = Pose(Point(vehicle->GetTransform().location.x, vehicle->GetTransform().location.y, vehicle->GetTransform().location.z), Rotate(vehicle->GetTransform().rotation.yaw * pi/180, vehicle->GetTransform().rotation.pitch * pi/180, vehicle->GetTransform().rotation.roll * pi/180)) - poseRef;
-		drawCar(truePose, 0,  Color(1,0,0), 0.7, viewer);
-		double theta = truePose.rotation.yaw;
-		double stheta = control.steer * pi/4 + theta;
-		viewer->removeShape("steer");
-		renderRay(viewer, Point(truePose.position.x+2*cos(theta), truePose.position.y+2*sin(theta),truePose.position.z),  Point(truePose.position.x+4*cos(stheta), truePose.position.y+4*sin(stheta),truePose.position.z), "steer", Color(0,1,0));
+    auto lidarBp = blueprint->Find("sensor.lidar.ray_cast");
+    SetupLidar(lidarBp);
+    auto lidarTransform = carla::geom::Transform(carla::geom::Location(-0.5, 0, 1.8));
+    auto lidar = boost::static_pointer_cast<carla::client::Sensor>(world.SpawnActor(lidarBp, lidarTransform, vehicle.get()));
 
+    Pose3D pose({0, 0, 0}, {0, 0, 0});
+    Pose3D refPose({vehicle->GetTransform().location.x, vehicle->GetTransform().location.y, vehicle->GetTransform().location.z},
+                   {vehicle->GetTransform().rotation.yaw * M_PI / 180, 0, 0});
 
-		ControlState accuate(0, 0, 1);
-		if(cs.size() > 0){
-			accuate = cs.back();
-			cs.clear();
+    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
+    viewer->setBackgroundColor(0, 0, 0);
+    viewer->registerKeyboardCallback(HandleKeyEvent, (void *)&viewer);
 
-			Accuate(accuate, control);
-			vehicle->ApplyControl(control);
-		}
+    PointCloudT::Ptr mapCloud(new PointCloudT);
+    pcl::io::loadPCDFile(BASE_PATH + "map.pcd", *mapCloud);
+    renderPointCloud(viewer, mapCloud, "map", {0, 0, 1});
 
-  		viewer->spinOnce ();
-		
-		if(!new_scan){
-			
-			new_scan = true;
-			
-			// ============================== Step 1: Filter scan using voxel filter
+    pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> ndt;
+    if (!USE_ICP) InitNDT(ndt, *mapCloud);
 
-			// Create VoxelGrid filter to downsample input pcl
-			pcl::VoxelGrid<PointT> vg;
-			vg.setInputCloud(scanCloud);
+    lidar->Listen([&](auto data) {
+        if (lidarCloud.points.size() > MAX_MAP_POINTS) return;
+        auto scan = boost::static_pointer_cast<carla::sensor::data::LidarMeasurement>(data);
+        for (auto pt : *scan) if (!IsPointInEgoRange(pt)) lidarCloud.push_back({pt.point.x, pt.point.y, pt.point.z});
+    });
 
-			// Set filter leaf size
-			float leafSize = 0.5f;
-			vg.setLeafSize(leafSize, leafSize, leafSize);
-			typename pcl::PointCloud<PointT>::Ptr cloudFiltered (new pcl::PointCloud<PointT>);
-			vg.filter(*cloudFiltered);
+    while (!viewer->wasStopped()) {
+        if (refreshView) {
+            viewer->setCameraPosition(pose.position.x, pose.position.y, 60, pose.position.x + 1, pose.position.y + 1, 0);
+            refreshView = false;
+        }
 
+        if (lidarCloud.points.size() > 0) {
+            PointCloudT::Ptr filteredCloud(new PointCloudT);
+            pcl::VoxelGrid<PointT> voxel;
+            voxel.setInputCloud(PointCloudT::Ptr(new PointCloudT(lidarCloud)));
+            voxel.setLeafSize(VOXEL_LEAF_RES, VOXEL_LEAF_RES, VOXEL_LEAF_RES);
+            voxel.filter(*filteredCloud);
 
-			// ============================== Step 2: Find pose transform by using ICP or NDT matching
+            Eigen::Matrix4d transform = USE_ICP ? RunICP(mapCloud, filteredCloud, pose, ICP_MAX_ITER) : RunNDT(ndt, filteredCloud, pose, NDT_MAX_ITER);
+            pose = getPose3D::getPose(transform);
 
-			// Initialize NDT for pcl
-			pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> ndt;
-			ndt.setInputSource(cloudFiltered);			// Source: filtered scane
-			ndt.setInputTarget(mapCloud);				// Target: map
-			ndt.setTransformationEpsilon(0.01);			// Min transformation epsilon for convergence
-			ndt.setStepSize(0.1);						// Step size for optimization
-			ndt.setResolution(1.0);						// NDT resolution
-			ndt.setMaximumIterations(35);
-
-			// Initial guess for transformation, based on ego's pose
-			Eigen::Matrix4f guess = transform3D(
-				pose.rotation.yaw, pose.rotation.pitch, pose.rotation.roll, 
-				pose.position.x, pose.position.y, pose.position.z
-			).cast<float>();
-			pcl::PointCloud<pcl::PointXYZ>::Ptr couldFinal (new pcl::PointCloud<pcl::PointXYZ>);
-			ndt.align(*couldFinal, guess);				// Align scan to map
-
-			Eigen::Matrix4d transformation = ndt.getFinalTransformation().cast<double>();
-			pose = getPose(transformation);				// Update ego's pose based on transformation
-
-
-			// ============================== Step 3: Transform scan so it aligns with ego's actual pose and render that scan
-
-			// Apply transformation to filtered scan cloud
-			PointCloudT::Ptr scanCloud (new PointCloudT);
-			pcl::transformPointCloud(*cloudFiltered, *scanCloud, transformation);
-
-			// Render scan in viewer
-			viewer->removePointCloud("scan");
-			renderPointCloud(viewer, scanCloud, "scan", Color(1,0,0) );
-
-			// Update car pose in viewer
-			viewer->removeAllShapes();
-			drawCar(pose, 1,  Color(0,1,0), 0.35, viewer);
-          
-          	double poseError = sqrt( (truePose.position.x - pose.position.x) * (truePose.position.x - pose.position.x) + (truePose.position.y - pose.position.y) * (truePose.position.y - pose.position.y) );
-			if(poseError > maxError)
-				maxError = poseError;
-			double distDriven = sqrt( (truePose.position.x) * (truePose.position.x) + (truePose.position.y) * (truePose.position.y) );
-			viewer->removeShape("maxE");
-			viewer->addText("Max Error: "+to_string(maxError)+" m", 200, 100, 32, 1.0, 1.0, 1.0, "maxE",0);
-			viewer->removeShape("derror");
-			viewer->addText("Pose error: "+to_string(poseError)+" m", 200, 150, 32, 1.0, 1.0, 1.0, "derror",0);
-			viewer->removeShape("dist");
-			viewer->addText("Distance: "+to_string(distDriven)+" m", 200, 200, 32, 1.0, 1.0, 1.0, "dist",0);
-
-			if(maxError > 1.2 || distDriven >= 170.0 ){
-				viewer->removeShape("eval");
-			if(maxError > 1.2){
-				viewer->addText("Try Again", 200, 50, 32, 1.0, 0.0, 0.0, "eval",0);
-			}
-			else{
-				viewer->addText("Passed!", 200, 50, 32, 0.0, 1.0, 0.0, "eval",0);
-			}
-		}
-
-			pclCloud.points.clear();
-		}
-  	}
-	return 0;
+            PointCloudT::Ptr aligned(new PointCloudT);
+            pcl::transformPointCloud(*filteredCloud, *aligned, transform);
+            renderPointCloud(viewer, aligned, "scan", {1, 0, 0});
+            lidarCloud.clear();
+        }
+        viewer->spinOnce();
+    }
+    return 0;
 }
