@@ -37,33 +37,45 @@ Eigen::Matrix4d transform3D(double yaw, double pitch, double roll, double xt, do
 	return matrix;
 }
 
-Pose3D getPose3D::getPose(Eigen::Matrix4d mat) {
-    return Pose3D(
-        {mat(0, 3), mat(1, 3), mat(2, 3)},
-        {atan2(mat(1, 0), mat(0, 0)), atan2(-mat(2, 0), sqrt(mat(2, 1) * mat(2, 1) + mat(2, 2) * mat(2, 2))), atan2(mat(2, 1), mat(2, 2))}
-    );
+Pose getPose(Eigen::Matrix4d matrix){
+
+	Pose pose(Point(matrix(0,3), matrix(1,3), matrix(2,3)), Rotate(atan2(matrix(1, 0),matrix(0, 0)), atan2(-matrix(2,0), sqrt(matrix(2,1)*matrix(2,1) + matrix(2,2)*matrix(2,2))), atan2(matrix(2,1),matrix(2,2))));
+	return pose;
 }
 
-Pose2D getPose2D::getPose(Eigen::Matrix4d mat) {
-    return Pose2D({mat(0, 3), mat(1, 3)}, atan2(mat(1, 0), mat(0, 0)));
+double getDistance(Point p1, Point p2){
+	return sqrt( (p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y) + (p1.z-p2.z)*(p1.z-p2.z) );
 }
 
-double getDistance3D::getDistance(Point3D p1, Point3D p2) {
-    return sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2) + pow(p1.z - p2.z, 2));
+double minDistance(Point p1, vector<Point> points){
+	if(points.size() > 0){
+		double dist = getDistance(p1, points[0]);
+		for(int index = 1; index < points.size(); index++){
+			double newDist = getDistance(p1, points[index]);
+			if( newDist < dist)
+				dist = newDist;
+		}
+		return dist;
+	}
+	return -1;
 }
 
-double minDistance3D::minDistance(Point3D p, std::vector<Point3D> pts) {
-    double dist = pts.empty() ? -1 : getDistance3D::getDistance(p, pts[0]);
-    for (const auto &pt : pts) dist = std::min(dist, getDistance3D::getDistance(p, pt));
-    return dist;
+void print4x4Matrix (const Eigen::Matrix4d & matrix){
+  printf ("Rotation matrix :\n");
+  printf ("    | %6.3f %6.3f %6.3f | \n", matrix (0, 0), matrix (0, 1), matrix (0, 2));
+  printf ("R = | %6.3f %6.3f %6.3f | \n", matrix (1, 0), matrix (1, 1), matrix (1, 2));
+  printf ("    | %6.3f %6.3f %6.3f | \n", matrix (2, 0), matrix (2, 1), matrix (2, 2));
+  printf ("Translation vector :\n");
+  printf ("t = < %6.3f, %6.3f, %6.3f >\n\n", matrix (0, 3), matrix (1, 3), matrix (2, 3));
 }
 
-void print4x4Matrixd::print4x4Matrix(const Eigen::Matrix4d &mat) {
-	printf("Rotation matrix :\n");
-    printf("R:\n| %6.3f %6.3f %6.3f |\n| %6.3f %6.3f %6.3f |\n| %6.3f %6.3f %6.3f |\n",
-           mat(0, 0), mat(0, 1), mat(0, 2), mat(1, 0), mat(1, 1), mat(1, 2), mat(2, 0), mat(2, 1), mat(2, 2));
-	print("Translation vector :\n");
-    printf("t: < %6.3f, %6.3f, %6.3f >\n", mat(0, 3), mat(1, 3), mat(2, 3));
+void print4x4Matrixf (const Eigen::Matrix4f & matrix){
+  printf ("Rotation matrix :\n");
+  printf ("    | %6.3f %6.3f %6.3f | \n", matrix (0, 0), matrix (0, 1), matrix (0, 2));
+  printf ("R = | %6.3f %6.3f %6.3f | \n", matrix (1, 0), matrix (1, 1), matrix (1, 2));
+  printf ("    | %6.3f %6.3f %6.3f | \n", matrix (2, 0), matrix (2, 1), matrix (2, 2));
+  printf ("Translation vector :\n");
+  printf ("t = < %6.3f, %6.3f, %6.3f >\n\n", matrix (0, 3), matrix (1, 3), matrix (2, 3));
 }
 
 void renderPointCloud(pcl::visualization::PCLVisualizer::Ptr& viewer, const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, std::string name, Color color, int renderSize){
