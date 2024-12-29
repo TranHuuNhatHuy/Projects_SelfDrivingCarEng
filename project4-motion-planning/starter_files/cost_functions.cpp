@@ -50,11 +50,11 @@ double collision_circles_cost_spiral(const std::vector<PathPoint>& spiral,
     double cur_yaw = wp.theta;  // This is already in rad.
 
     for (size_t c = 0; c < n_circles && !collision; ++c) {
-      // TODO-Circle placement: Where should the circles be at? The code below
-      // is NOT complete. HINT: use CIRCLE_OFFSETS[c], sine and cosine to
-      // calculate x and y: cur_y + CIRCLE_OFFSETS[c] * std::sin/cos(cur_yaw)
-      auto circle_center_x = 0;  // <- Update 
-      auto circle_center_y = 0;  // <- Update 
+
+      // ================= Circle placement
+
+      auto circle_center_x = cur_x + CIRCLE_OFFSETS[c] * cos(cur_yaw);
+      auto circle_center_y = cur_y + CIRCLE_OFFSETS[c] * sin(cur_yaw);
 
       for (auto obst : obstacles) {
         if (collision) {
@@ -67,10 +67,11 @@ double collision_circles_cost_spiral(const std::vector<PathPoint>& spiral,
           auto actor_center_y =
               obst.location.y + CIRCLE_OFFSETS[c2] * std::sin(actor_yaw);
 
-          // TODO-Distance from circles to obstacles/actor: How do you calculate
-          // the distance between the center of each circle and the
-          // obstacle/actor
-          double dist = 0;  // <- Update
+          // ================= Distance from circles to obstacles/actor
+
+          double dx = circle_center_x - actor_center_x;
+          double dy = circle_center_y - actor_center_y;
+          double dist = sqrt(dx * dx + dy * dy);
 
           collision = (dist < (CIRCLE_RADII[c] + CIRCLE_RADII[c2]));
         }
@@ -87,15 +88,11 @@ double close_to_main_goal_cost_spiral(const std::vector<PathPoint>& spiral,
   // center-line, and that are collision free, will be prefered.
   auto n = spiral.size();
 
-  // TODO-distance between last point on spiral and main goal: How do we
-  // calculate the distance between the last point on the spiral (spiral[n-1])
-  // and the main goal (main_goal.location). Use spiral[n - 1].x, spiral[n -
-  // 1].y and spiral[n - 1].z.
-  // Use main_goal.location.x, main_goal.location.y and main_goal.location.z
-  // Ex: main_goal.location.x - spiral[n - 1].x
-  auto delta_x = 0;  // <- Update
-  auto delta_y = 0;  // <- Update
-  auto delta_z = 0;  // <- Update
+  // ================= Distance between last point on spiral and main goal
+
+  auto delta_x = main_goal.location.x - spiral[n - 1].x;
+  auto delta_y = main_goal.location.y - spiral[n - 1].y;
+  auto delta_z = main_goal.location.z - spiral[n - 1].z;
 
   auto dist = std::sqrt((delta_x * delta_x) + (delta_y * delta_y) +
                         (delta_z * delta_z));

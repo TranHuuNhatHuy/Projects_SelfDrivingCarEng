@@ -357,12 +357,16 @@ double VelocityProfileGenerator::calc_distance(const double& v_i,
   if (std::abs(a) < DBL_EPSILON) {
     d = std::numeric_limits<double>::infinity();
   } else {
-    // TODO-calc distance: use one of the common rectilinear accelerated
-    // equations of motion to calculate the distance traveled while going from
+
+    // ================= Calculate distance
+    // Use one of the common rectilinear accelerated equations of
+    // motion to calculate the distance traveled while going from
     // v_i (initial velocity) to v_f (final velocity) at a constant
-    // acceleration/deceleration "a". HINT look at the description of this
-    // function. Make sure you handle div by 0
-    d = 0;  // <- Update
+    // acceleration/deceleration "a". HINT look at the description
+    // of this function. Make sure you handle div by 0
+
+    d = (v_f * v_f - v_i * v_i) / (2.0 * a);  // Distance traveled, quick maths
+
   }
   return d;
 }
@@ -380,16 +384,18 @@ double VelocityProfileGenerator::calc_final_speed(const double& v_i,
                                                   const double& a,
                                                   const double& d) const {
   double v_f{0.0};
-  // TODO-calc final speed: Calculate the final distance. HINT: look at the
-  // description of this function. Make sure you handle negative discriminant
-  // and make v_f = 0 in that case. If the discriminant is inf or nan return
-  // infinity
+  
+  // ================= Calculate final speed
+  // Calculate the final distance. HINT: look at description of this func.
+  // Make sure of negative discriminant and make v_f = 0 in that case. 
 
-  double disc = 0;  // <- Fix this
-  if (disc <= 0.0) {
+  double disc = v_i * v_i + 2.0 * a * d;        // Discriminant
+  if (disc <= 0.0) {                            // Handle negative
     v_f = 0.0;
-  } else if (disc == std::numeric_limits<double>::infinity() ||
-             std::isnan(disc)) {
+  } else if (                                   // Handle inf or NaN
+    disc == std::numeric_limits<double>::infinity() ||
+    std::isnan(disc)
+  ) {
     v_f = std::numeric_limits<double>::infinity();
   } else {
     v_f = std::sqrt(disc);
