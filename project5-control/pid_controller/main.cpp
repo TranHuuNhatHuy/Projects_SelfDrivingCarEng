@@ -309,7 +309,7 @@ int main ()
           double error_steer;
           double steer_output;
 
-          abp = angle_between_points(           // Angle between point, where we should steer
+          double abp = angle_between_points(           // Angle between point, where we should steer
             x_position, 
             y_position, 
             x_points[x_points.size() - 1], 
