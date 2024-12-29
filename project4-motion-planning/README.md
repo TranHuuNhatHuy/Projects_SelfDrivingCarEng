@@ -54,13 +54,13 @@ During this project, I set the general params for motion planning as below (you 
 
 With this, each of `dt = 0.5` seconds there are 7 polynomial paths to be considered, as seen below:
 
-![alt text](image.png)
+![alt text](./assets/image.png)
 
 As you can see throughout the demo run, the vehicle demonstrates the ability to detect and avoid static obstacles, such as parked cars, within its lane. It successfully performs **nudge maneuvers** and **lane changes** when appropriate, ensuring a smooth and collision-free trajectory.
 
-![alt text](image-1.png)
+![alt text](./assets/image-1.png)
 
-![alt text](image-2.png)
+![alt text](./assets/image-2.png)
 
 The vehicle also consistently tracks the centerline of its traveling lane, maintaining a stable and predictable path. This reflects the effectiveness of the cubic spiral trajectory generation and the cost function's design to prioritize proximity to the centerline. In additiona, it also dynamically evaluates and selects optimal trajectories, balancing collision avoidance with adherence to the lane. From the results, it seems the cost function is well-calibrated to penalize proximity to obstacles while encouraging smooth navigation.
 
