@@ -61,15 +61,15 @@ using json = nlohmann::json;
 
 // PID steering params
 const double P_STEER_Kp = 0.3;
-const double P_STEER_Ki = 0.005;
-const double P_STEER_Kd = 0.1;
-const double P_STEER_MAX = 1.0;
-const double P_STEER_MIN = -1.0;
+const double P_STEER_Ki = 0.0025;
+const double P_STEER_Kd = 0.17;
+const double P_STEER_MAX = 0.6;
+const double P_STEER_MIN = -0.6;
 
 // PID throttle params
-const double P_THROTTLE_Kp = 0.2;
-const double P_THROTTLE_Ki = 0.001;
-const double P_THROTTLE_Kd = 0.1;
+const double P_THROTTLE_Kp = 0.21;
+const double P_THROTTLE_Ki = 0.0006;
+const double P_THROTTLE_Kd = 0.08;
 const double P_THROTTLE_MAX = 1.0;
 const double P_THROTTLE_MIN = -1.0;
 
