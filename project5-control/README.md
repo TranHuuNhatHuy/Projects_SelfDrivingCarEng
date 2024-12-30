@@ -59,7 +59,7 @@ During this project, I set the general params for motion planning as below (you 
   P_LOOKAHEAD_MIN / P_NUM_POINTS_IN_SPIRAL * 2  // m
 ```
 
-Also, after days after nights trying to tune the PID params, as well as extensively searching for clues, I have finally came up with the PID parameters as below:
+Also, after **days after nights** trying to tune the PID params, as well as extensively searching for clues, I have finally came up with the PID parameters as below:
 
 ```C
 // PID steering params
