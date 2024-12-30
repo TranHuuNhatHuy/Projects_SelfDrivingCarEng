@@ -126,7 +126,7 @@ int main() {
 
     // Connect to CARLA simulator
     auto client = cc::Client("localhost", 2000);
-    client.SetTimeout(2s);
+    client.SetTimeout(10s);
     auto world = client.GetWorld();
 
     // Get vehicle from blueprint library then spawn it
