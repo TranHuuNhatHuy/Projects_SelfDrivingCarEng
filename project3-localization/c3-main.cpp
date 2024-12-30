@@ -136,7 +136,7 @@ int main() {
     auto transform = map->GetRecommendedSpawnPoints()[1];
     auto ego_actor = world.SpawnActor((*vehicles)[12], transform);
 
-    // Config then spawn lidar sensor
+    // Config lidar
     auto lidar_bp = *(blueprint_library->Find("sensor.lidar.ray_cast"));
     lidar_bp.SetAttribute("upper_fov", "15");
     lidar_bp.SetAttribute("lower_fov", "-25");
@@ -145,10 +145,13 @@ int main() {
     lidar_bp.SetAttribute("rotation_frequency", "60");
     lidar_bp.SetAttribute("points_per_second", "500000");
 
+	// Set lidar position
     auto user_offset = cg::Location(0, 0, 0);
     auto lidar_transform = cg::Transform(cg::Location(-0.5, 0, 1.8) + user_offset);
     auto lidar_actor = world.SpawnActor(lidar_bp, lidar_transform, ego_actor.get());
     auto lidar = boost::static_pointer_cast<cc::Sensor>(lidar_actor);
+	bool new_scan = true;
+	std::chrono::time_point<std::chrono::system_clock> lastScanTime, startTime;
 
     // Visualization config & init
     pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
