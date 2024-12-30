@@ -26,3 +26,18 @@ Note that you will also want to update what is fed into `renderPointCloud` to ch
 
 ## III. Results
 
+### 1. Evaluation
+
+The full screen recording of the demo run could be seen in `assets/demo_run.mp4` of this project directory. Please note that the record has been sped up by `x3` for better visualization, but this result came from `x4` real-time speed (equivalent to UP button x 4), so the quality of this result is undisputed.
+
+![result_glimpse](./assets/result_glimpse.png)
+
+As you can see from the result video, in terms of localization performance, the car appears to align well with the point cloud map during its trajectory. The pose estimation is visually accurate, as indicated by the alignment of lidar scans with the map.
+
+![result_passed](./assets/result_passed.png)
+
+In details, the car successfully travels `170 meters` with max pose error being `0.83`, which satisfies the project requirements. At the beginning, during initial pose alignment, the error stays at around `0.2`. While traveling across the path, most of the time pose error fluctuates between `0.0` and `0.3`, indicating a very good real-time scan matching and localization.
+
+### 2. Discussion
+
+At around `44-45` seconds in the video, when distance traveled is approximately `137 meters`, I dragged the view to match car's current location (which I should have done it with `A` key). Right after this, the pose error jumped from `0.3` to `0.8`. This unintentionally creates a "lag" in our real-time system, which in real cases could be fatal to these time-sensitive system.
